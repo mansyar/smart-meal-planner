@@ -1,0 +1,165 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  isPremium      Boolean    @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  profile        Profile?
+  mealPlans      MealPlan[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
+
+/// --------------------
+/// Profile / Preferences
+/// --------------------
+model Profile {
+  id            String   @id @default(cuid())
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String   @unique
+  dietType      String?  // e.g., keto, vegetarian, halal
+  allergies     String?  // comma-separated list
+  calorieGoal   Int?     // daily calories
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/// --------------------
+/// Meal Plans
+/// --------------------
+model MealPlan {
+  id           String     @id @default(cuid())
+  user         User       @relation(fields: [userId], references: [id])
+  userId       String
+  weekStart    DateTime   // start date of the week
+  meals        Meal[]     // relation to Meal
+  shoppingList ShoppingList?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  @@unique([userId, weekStart]) // one meal plan per user per week
+}
+
+/// --------------------
+/// Individual Meals
+/// --------------------
+model Meal {
+  id           String     @id @default(cuid())
+  mealPlan     MealPlan   @relation(fields: [mealPlanId], references: [id])
+  mealPlanId   String
+  dayOfWeek    Int        // 1=Monday, 7=Sunday
+  type         String     // breakfast, lunch, dinner, snack
+  recipe       Recipe?    @relation(fields: [recipeId], references: [id])
+  recipeId     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  @@unique([mealPlanId, dayOfWeek, type]) // one meal of each type per day per meal plan
+
+}
+
+/// --------------------
+/// Recipes
+/// --------------------
+model Recipe {
+  id            String     @id @default(cuid())
+  title         String
+  ingredients   String     // JSON string or comma-separated
+  instructions  String
+  nutritionData String     // JSON string: calories, protein, carbs, fat
+  imageUrl      String?    // optional image stored in Cloudflare R2
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+
+  // Relation
+  meals         Meal[]
+}
+
+/// --------------------
+/// Shopping List
+/// --------------------
+model ShoppingList {
+  id           String     @id @default(cuid())
+  mealPlan     MealPlan   @relation(fields: [mealPlanId], references: [id])
+  mealPlanId   String     @unique
+  items        ShoppingItem[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model ShoppingItem {
+  id             String     @id @default(cuid())
+  shoppingList   ShoppingList @relation(fields: [shoppingListId], references: [id])
+  shoppingListId String
+  name           String
+  quantity       String     // e.g., "2 cups", "500g"
+  category       String?    // e.g., Fruits, Meats, Spices
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}

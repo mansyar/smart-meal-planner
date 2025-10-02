@@ -8,10 +8,10 @@
 **Goal:** Initialize project structure, tools, and dependencies.
 
 **Tasks:**
-- [ ] Initialize a **Next.js 15 project** with TypeScript
-- [ ] Set up **Tailwind CSS** and **shadcn/ui** components
-- [ ] Initialize **Prisma** and configure PostgreSQL connection
-- [ ] Set up **Better Auth** for authentication
+- [X] Initialize a **Next.js 15 project** with TypeScript
+- [X] Set up **Tailwind CSS** and **shadcn/ui** components
+- [X] Initialize **Prisma** and configure PostgreSQL connection
+- [X] Set up **Better Auth** for authentication
 - [ ] Set up **Cloudflare R2** SDK for file storage integration
 - [ ] Configure **ESLint / Prettier / Husky** for code quality
 - [ ] Optional: Set up **VPS + Coolify deployment template** for early testing
