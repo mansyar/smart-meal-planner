@@ -15,8 +15,8 @@
 - [x] Initialize **Prisma** and configure PostgreSQL connection
 - [x] Set up **Better Auth** for authentication
 - [x] Set up **Cloudflare R2** SDK for file storage integration
-- [ ] Configure **ESLint / Prettier / Husky** for code quality
-- [ ] Optional: Set up **VPS + Coolify deployment template** for early testing
+- [x] Configure **ESLint / Prettier / Husky** for code quality
+- [x] Optional: Set up **VPS + Coolify deployment template** for early testing
 
 **Testable Criteria:**
 

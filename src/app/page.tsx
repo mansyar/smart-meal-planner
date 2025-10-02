@@ -1,102 +1,390 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  CheckCircle,
+  Sparkles,
+  ChefHat,
+  ShoppingCart,
+  Calendar,
+  Zap,
+} from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="flex min-h-screen flex-col">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-orange-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]" />
+        <div className="relative mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-2 text-sm font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
+              <Sparkles className="h-4 w-4" />
+              AI-Powered Meal Planning
+            </div>
+            <h1 className="text-5xl font-bold tracking-tight text-gray-900 sm:text-7xl dark:text-white">
+              Your Personal
+              <span className="bg-gradient-to-r from-orange-600 to-green-600 bg-clip-text text-transparent">
+                {" "}
+                AI Chef{" "}
+              </span>
+              Awaits
+            </h1>
+            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
+              Generate personalized weekly meal plans in seconds. Tailored to
+              your diet, allergies, and calorie goals. Say goodbye to meal
+              planning stress and hello to delicious, healthy eating.
+            </p>
+            <div className="mt-10 flex items-center justify-center gap-x-6">
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-orange-600 to-green-600 text-white hover:from-orange-700 hover:to-green-700"
+              >
+                <Link href="/signup">Get Started Free</Link>
+              </Button>
+              <Button size="lg" variant="outline">
+                <Link href="#demo">Try Demo Plan</Link>
+              </Button>
+            </div>
+            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+              No credit card required • Free plan available
+            </p>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          {/* Hero Image / Mockup */}
+          <div className="mt-16 flow-root sm:mt-24">
+            <div className="relative rounded-xl bg-gray-900/5 p-2 ring-1 ring-inset ring-gray-900/10 lg:rounded-2xl lg:p-4 dark:bg-gray-100/5 dark:ring-gray-100/10">
+              <div className="aspect-video rounded-md bg-gradient-to-br from-orange-100 to-green-100 shadow-2xl dark:from-orange-900/20 dark:to-green-900/20" />
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-24 sm:py-32">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-base font-semibold leading-7 text-orange-600 dark:text-orange-400">
+              Everything You Need
+            </h2>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
+              Smart Features for Smarter Eating
+            </p>
+            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
+              Powered by AI to make meal planning effortless and enjoyable
+            </p>
+          </div>
+
+          <div className="mx-auto mt-16 max-w-7xl">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              <Card className="border-orange-100 dark:border-orange-900/30">
+                <CardHeader>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-600">
+                    <Sparkles className="h-6 w-6 text-white" />
+                  </div>
+                  <CardTitle className="mt-4">AI-Generated Plans</CardTitle>
+                  <CardDescription>
+                    Get personalized weekly meal plans generated by AI in
+                    seconds, tailored to your preferences.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="border-green-100 dark:border-green-900/30">
+                <CardHeader>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-600">
+                    <ChefHat className="h-6 w-6 text-white" />
+                  </div>
+                  <CardTitle className="mt-4">Detailed Recipes</CardTitle>
+                  <CardDescription>
+                    Access full recipes with ingredients, step-by-step
+                    instructions, and complete nutrition facts.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="border-blue-100 dark:border-blue-900/30">
+                <CardHeader>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600">
+                    <Zap className="h-6 w-6 text-white" />
+                  </div>
+                  <CardTitle className="mt-4">Instant Meal Swaps</CardTitle>
+                  <CardDescription>
+                    Don&apos;t like a meal? Swap it instantly with AI-powered
+                    alternatives that match your goals.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="border-purple-100 dark:border-purple-900/30">
+                <CardHeader>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-600">
+                    <ShoppingCart className="h-6 w-6 text-white" />
+                  </div>
+                  <CardTitle className="mt-4">Smart Shopping Lists</CardTitle>
+                  <CardDescription>
+                    Auto-generated shopping lists from your meal plan. Edit,
+                    check off, and never miss an ingredient.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="border-pink-100 dark:border-pink-900/30">
+                <CardHeader>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-pink-600">
+                    <Calendar className="h-6 w-6 text-white" />
+                  </div>
+                  <CardTitle className="mt-4">Weekly Planning</CardTitle>
+                  <CardDescription>
+                    Organize your entire week with breakfast, lunch, and dinner
+                    plans. Stay on track effortlessly.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="border-orange-100 dark:border-orange-900/30">
+                <CardHeader>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-600">
+                    <CheckCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <CardTitle className="mt-4">Diet Preferences</CardTitle>
+                  <CardDescription>
+                    Customize for any diet: vegan, keto, gluten-free, and more.
+                    Include allergies and calorie targets.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="bg-gray-50 py-24 sm:py-32 dark:bg-gray-900">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-base font-semibold leading-7 text-orange-600 dark:text-orange-400">
+              Simple Process
+            </h2>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
+              How It Works
+            </p>
+            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
+              Get started with your personalized meal plan in three easy steps
+            </p>
+          </div>
+
+          <div className="mx-auto mt-16 max-w-4xl">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              <div className="text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-600 text-2xl font-bold text-white">
+                  1
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
+                  Set Your Preferences
+                </h3>
+                <p className="mt-4 text-gray-600 dark:text-gray-300">
+                  Tell us about your diet type, allergies, and calorie goals
+                </p>
+              </div>
+
+              <div className="text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-600 text-2xl font-bold text-white">
+                  2
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
+                  Generate Your Plan
+                </h3>
+                <p className="mt-4 text-gray-600 dark:text-gray-300">
+                  AI creates a personalized weekly meal plan in seconds
+                </p>
+              </div>
+
+              <div className="text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white">
+                  3
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
+                  Cook & Enjoy
+                </h3>
+                <p className="mt-4 text-gray-600 dark:text-gray-300">
+                  Follow recipes, use your shopping list, and enjoy delicious
+                  meals
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-24 sm:py-32" id="pricing">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-base font-semibold leading-7 text-orange-600 dark:text-orange-400">
+              Pricing
+            </h2>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
+              Choose Your Plan
+            </p>
+            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
+              Start free and upgrade when you&apos;re ready for more
+            </p>
+          </div>
+
+          <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* Guest Plan */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Guest</CardTitle>
+                <CardDescription className="text-3xl font-bold text-gray-900 dark:text-white">
+                  Free
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    One demo meal plan
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    View recipes & nutrition
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    See shopping list
+                  </li>
+                </ul>
+                <Button variant="outline" className="w-full">
+                  <Link href="#demo">Try Demo</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Registered Plan */}
+            <Card className="border-2 border-orange-600 relative">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-orange-600 px-4 py-1 text-sm font-medium text-white">
+                Popular
+              </div>
+              <CardHeader>
+                <CardTitle>Registered</CardTitle>
+                <CardDescription className="text-3xl font-bold text-gray-900 dark:text-white">
+                  Free
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Save unlimited meal plans
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Swap meals with AI
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Edit shopping lists
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Custom diet preferences
+                  </li>
+                </ul>
+                <Button className="w-full bg-orange-600 hover:bg-orange-700">
+                  <Link href="/signup">Sign Up Free</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Premium Plan */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Premium</CardTitle>
+                <CardDescription className="text-3xl font-bold text-gray-900 dark:text-white">
+                  $9.99
+                  <span className="text-base font-normal text-gray-600">
+                    /mo
+                  </span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Everything in Registered
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Unlimited meal swaps
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    PDF export
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Priority support
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Early access to new features
+                  </li>
+                </ul>
+                <Button variant="outline" className="w-full">
+                  <Link href="/signup?plan=premium">Upgrade to Premium</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-orange-600 to-green-600">
+        <div className="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Ready to Transform Your Meal Planning?
+            </h2>
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-orange-100">
+              Join thousands of users who have simplified their meal planning
+              with AI. Start your journey to healthier, stress-free eating
+              today.
+            </p>
+            <div className="mt-10 flex items-center justify-center gap-x-6">
+              <Button size="lg" variant="secondary">
+                <Link href="/signup">Get Started Free</Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="ghost"
+                className="text-white hover:bg-white/10 hover:text-white"
+              >
+                <Link href="#pricing">View Pricing</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white">
+        <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
+          <div className="text-center">
+            <p className="text-sm leading-6 text-gray-400">
+              &copy; {new Date().getFullYear()} AI Meal Planner. All rights
+              reserved.
+            </p>
+          </div>
+        </div>
       </footer>
     </div>
   );
