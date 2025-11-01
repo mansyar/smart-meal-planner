@@ -32,13 +32,17 @@
 
 **Goal:** Enable users to sign up, login, and set preferences.
 
+**Status:** ✅ Completed
+
+**Summary:** Implemented Better Auth (email/password + Google), signup/login pages, cookie-based sessions, onboarding wizard (diet, allergies, calorie goal), and persisted preferences to PostgreSQL via Prisma. Authentication now uses Better Auth defaults with server-side session verification; onboarding uses Next.js server actions for secure profile writes.
+
 **Tasks:**
 
-- [ ] Set up authentication with **Better Auth** (email/password + Google login)
-- [ ] Create **Signup / Login pages** using shadcn/ui components
-- [ ] Implement **cookie-based sessions**
-- [ ] Build **Onboarding Wizard** to collect diet type, allergies, and calorie goal
-- [ ] Store user preferences in **PostgreSQL via Prisma**
+- [x] Set up authentication with **Better Auth** (email/password + Google login)
+- [x] Create **Signup / Login pages** using shadcn/ui components
+- [x] Implement **cookie-based sessions**
+- [x] Build **Onboarding Wizard** to collect diet type, allergies, and calorie goal
+- [x] Store user preferences in **PostgreSQL via Prisma**
 
 **Testable Criteria:**
 
