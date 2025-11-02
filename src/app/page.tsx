@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DemoDialog from "@/components/demo/DemoDialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -48,9 +49,7 @@ export default function Home() {
               >
                 <Link href="/signup">Get Started Free</Link>
               </Button>
-              <Button size="lg" variant="outline">
-                <Link href="#demo">Try Demo Plan</Link>
-              </Button>
+              <DemoDialog />
             </div>
             <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
               No credit card required • Free plan available
@@ -262,9 +261,9 @@ export default function Home() {
                     See shopping list
                   </li>
                 </ul>
-                <Button variant="outline" className="w-full">
-                  <Link href="#demo">Try Demo</Link>
-                </Button>
+                <div className="w-full">
+                  <DemoDialog />
+                </div>
               </CardContent>
             </Card>
 
