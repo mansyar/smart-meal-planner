@@ -18,17 +18,17 @@ export default function MealCard({ meal, onOpen }: Props) {
   }
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-150">
+    <Card className="hover:shadow-lg transition-shadow duration-150 ring-1 ring-gray-50 dark:ring-gray-800">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                 meal.mealType === "breakfast"
-                  ? "bg-orange-50 text-orange-700"
+                  ? "bg-gradient-to-r from-orange-100 to-orange-50 text-orange-700"
                   : meal.mealType === "lunch"
-                    ? "bg-green-50 text-green-700"
-                    : "bg-blue-50 text-blue-700"
+                    ? "bg-gradient-to-r from-green-100 to-green-50 text-green-700"
+                    : "bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700"
               }`}
             >
               {meal.mealType?.toUpperCase()}
@@ -54,7 +54,12 @@ export default function MealCard({ meal, onOpen }: Props) {
             <span>{meal.servings ?? 1} serving</span>
           </div>
 
-          <Button size="sm" variant="ghost" onClick={handleClick}>
+          <Button
+            size="sm"
+            onClick={handleClick}
+            className="bg-gradient-to-r from-orange-600 to-green-600 text-white hover:from-orange-700 hover:to-green-700"
+            aria-label={`View ${meal.title} recipe`}
+          >
             View
           </Button>
         </div>

@@ -27,6 +27,14 @@ export type DemoDay = {
   };
 };
 
+// Unsplash images (royalty-free) used as placeholders
+const BREAKFAST_IMG =
+  "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80";
+const LUNCH_IMG =
+  "https://images.unsplash.com/photo-1546069901-d5bfd2cbfb1f?auto=format&fit=crop&w=1200&q=80";
+const DINNER_IMG =
+  "https://images.unsplash.com/photo-1611599537845-1c7aca0091c0?auto=format&fit=crop&w=1200&q=80";
+
 export const demoMealPlan: DemoDay[] = [
   {
     day: "Monday",
@@ -59,7 +67,7 @@ export const demoMealPlan: DemoDay[] = [
         },
         prepTimeMinutes: 10,
         servings: 1,
-        imageUrl: "",
+        imageUrl: BREAKFAST_IMG,
       },
       lunch: {
         id: "mon-lu-01",
@@ -92,7 +100,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 15,
         cookTimeMinutes: 10,
         servings: 1,
-        imageUrl: "",
+        imageUrl: LUNCH_IMG,
       },
       dinner: {
         id: "mon-di-01",
@@ -124,7 +132,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 10,
         cookTimeMinutes: 25,
         servings: 1,
-        imageUrl: "",
+        imageUrl: DINNER_IMG,
       },
     },
   },
@@ -157,7 +165,7 @@ export const demoMealPlan: DemoDay[] = [
         },
         prepTimeMinutes: 5,
         servings: 1,
-        imageUrl: "",
+        imageUrl: BREAKFAST_IMG,
       },
       lunch: {
         id: "tue-lu-01",
@@ -187,7 +195,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 12,
         cookTimeMinutes: 10,
         servings: 1,
-        imageUrl: "",
+        imageUrl: LUNCH_IMG,
       },
       dinner: {
         id: "tue-di-01",
@@ -218,7 +226,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 10,
         cookTimeMinutes: 12,
         servings: 1,
-        imageUrl: "",
+        imageUrl: DINNER_IMG,
       },
     },
   },
@@ -253,7 +261,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 8,
         cookTimeMinutes: 4,
         servings: 1,
-        imageUrl: "",
+        imageUrl: BREAKFAST_IMG,
       },
       lunch: {
         id: "wed-lu-01",
@@ -281,7 +289,7 @@ export const demoMealPlan: DemoDay[] = [
         },
         prepTimeMinutes: 8,
         servings: 1,
-        imageUrl: "",
+        imageUrl: LUNCH_IMG,
       },
       dinner: {
         id: "wed-di-01",
@@ -311,7 +319,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 10,
         cookTimeMinutes: 12,
         servings: 1,
-        imageUrl: "",
+        imageUrl: DINNER_IMG,
       },
     },
   },
@@ -345,7 +353,7 @@ export const demoMealPlan: DemoDay[] = [
         },
         prepTimeMinutes: 7,
         servings: 1,
-        imageUrl: "",
+        imageUrl: BREAKFAST_IMG,
       },
       lunch: {
         id: "thu-lu-01",
@@ -376,7 +384,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 10,
         cookTimeMinutes: 20,
         servings: 1,
-        imageUrl: "",
+        imageUrl: LUNCH_IMG,
       },
       dinner: {
         id: "thu-di-01",
@@ -405,7 +413,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 12,
         cookTimeMinutes: 10,
         servings: 1,
-        imageUrl: "",
+        imageUrl: DINNER_IMG,
       },
     },
   },
@@ -437,7 +445,7 @@ export const demoMealPlan: DemoDay[] = [
         },
         prepTimeMinutes: 5,
         servings: 1,
-        imageUrl: "",
+        imageUrl: BREAKFAST_IMG,
       },
       lunch: {
         id: "fri-lu-01",
@@ -465,7 +473,7 @@ export const demoMealPlan: DemoDay[] = [
         },
         prepTimeMinutes: 15,
         servings: 1,
-        imageUrl: "",
+        imageUrl: LUNCH_IMG,
       },
       dinner: {
         id: "fri-di-01",
@@ -493,7 +501,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 10,
         cookTimeMinutes: 30,
         servings: 1,
-        imageUrl: "",
+        imageUrl: DINNER_IMG,
       },
     },
   },
@@ -527,7 +535,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 8,
         cookTimeMinutes: 5,
         servings: 1,
-        imageUrl: "",
+        imageUrl: BREAKFAST_IMG,
       },
       lunch: {
         id: "sat-lu-01",
@@ -555,7 +563,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 12,
         cookTimeMinutes: 20,
         servings: 1,
-        imageUrl: "",
+        imageUrl: LUNCH_IMG,
       },
       dinner: {
         id: "sat-di-01",
@@ -583,7 +591,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 10,
         cookTimeMinutes: 10,
         servings: 1,
-        imageUrl: "",
+        imageUrl: DINNER_IMG,
       },
     },
   },
@@ -615,7 +623,7 @@ export const demoMealPlan: DemoDay[] = [
         },
         prepTimeMinutes: 3,
         servings: 1,
-        imageUrl: "",
+        imageUrl: BREAKFAST_IMG,
       },
       lunch: {
         id: "sun-lu-01",
@@ -643,7 +651,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 8,
         cookTimeMinutes: 8,
         servings: 1,
-        imageUrl: "",
+        imageUrl: LUNCH_IMG,
       },
       dinner: {
         id: "sun-di-01",
@@ -674,7 +682,7 @@ export const demoMealPlan: DemoDay[] = [
         prepTimeMinutes: 20,
         cookTimeMinutes: 60,
         servings: 1,
-        imageUrl: "",
+        imageUrl: DINNER_IMG,
       },
     },
   },

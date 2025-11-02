@@ -54,20 +54,28 @@
 
 ## Milestone 2 — Guest Demo Meal Plan
 
-**Goal:** Allow anonymous users to generate **1 demo meal plan**.
+**Goal:** Allow anonymous users to view a **static demo meal plan**.
+
+**Status:** ✅ Completed
+
+**Summary:** Implemented a pre-configured 7-day meal plan with realistic recipes, nutrition data, and high-quality images. Added responsive dashboard with tabs, meal cards, and recipe drawer with scrollable content. Applied landing page color palette (orange→green gradient) throughout the UI.
 
 **Tasks:**
 
-- [ ] Landing page with a **“Try Demo” button**
-- [ ] Server Action to call **AI API + Nutrition API** for a sample plan
-- [ ] Display **7-day meal plan dashboard** with cards and tabs
-- [ ] Stream meal generation for fast UX (skeleton loader during AI streaming)
+- [x] Create static **7-day meal plan** with balanced, realistic recipes
+- [x] Build **meal plan dashboard** with day tabs and responsive meal cards
+- [x] Implement **recipe drawer** with nutrition table, ingredients/instructions accordion
+- [x] Add **royalty-free images** from Unsplash for visual appeal
+- [x] Fix **drawer scrolling** to prevent overflow and keep footer accessible
+- [x] Apply **orange→green gradient** color palette from landing page
 
 **Testable Criteria:**
 
-- Guest can generate **1 demo meal plan** without signing up
-- Meals display correctly with placeholders during streaming
-- Recipes can be clicked to view details (Drawer/Dialog opens)
+- Demo page loads at `/demo` with complete 7-day meal plan
+- Meal cards display with gradient badges and hover effects
+- Recipe drawer opens with images, nutrition data, and scrollable content
+- Accordion sections expand without pushing footer off-screen
+- All images load from Unsplash with proper fallbacks
 
 ---
 

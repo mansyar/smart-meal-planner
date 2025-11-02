@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import {
   Drawer,
   DrawerContent,
@@ -8,9 +9,10 @@ import {
   DrawerTitle,
   DrawerDescription,
   DrawerFooter,
-  //   DrawerClose,
+  DrawerClose,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import {
   Accordion,
   AccordionItem,
@@ -39,17 +41,33 @@ export default function RecipeDrawer({ open, onOpenChange, meal }: Props) {
           <DrawerDescription>{meal?.description}</DrawerDescription>
         </DrawerHeader>
 
-        <div className="space-y-6 px-4 py-2">
-          {/* Image placeholder */}
-          <div className="h-40 w-full rounded-md bg-gradient-to-r from-orange-100 to-green-100 flex items-center justify-center text-gray-500">
-            {meal?.mealType ? (
-              <span className="text-sm font-medium">
-                Image for {meal.mealType}
-              </span>
-            ) : (
-              <span className="text-sm font-medium">Recipe image</span>
-            )}
-          </div>
+        {/* Make the main content scrollable so long accordion sections don't overflow the viewport */}
+        <div className="overflow-y-auto max-h-[65vh] space-y-6 px-4 py-2 pb-20 scroll-smooth">
+          {/* Image */}
+          {meal?.imageUrl ? (
+            <img
+              src={meal.imageUrl}
+              alt={meal.title ?? "Recipe image"}
+              loading="lazy"
+              className="h-40 w-full rounded-md object-cover shadow-sm"
+            />
+          ) : (
+            <div
+              role="img"
+              aria-label={
+                meal?.title ? `Image for ${meal.title}` : "Recipe image"
+              }
+              className="h-40 w-full rounded-md bg-gradient-to-r from-orange-100 to-green-100 flex items-center justify-center text-gray-600 shadow-sm"
+            >
+              {meal?.mealType ? (
+                <span className="text-sm font-medium">
+                  Image for {meal.mealType}
+                </span>
+              ) : (
+                <span className="text-sm font-medium">Recipe image</span>
+              )}
+            </div>
+          )}
 
           {/* Nutrition Table */}
           {meal?.nutrition && (
@@ -114,20 +132,27 @@ export default function RecipeDrawer({ open, onOpenChange, meal }: Props) {
           </div>
         </div>
 
-        <DrawerFooter>
-          <div className="flex w-full items-center justify-between">
+        <DrawerFooter className="sticky bottom-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800">
+          <div className="flex w-full items-center justify-between px-4 py-2">
             <div className="text-sm text-gray-500">Want to swap this meal?</div>
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                aria-label="Close recipe"
               >
                 Close
               </Button>
-              <Button size="sm" disabled>
-                Sign up to swap
-              </Button>
+
+              <Link href="/signup" aria-label="Sign up to swap this meal">
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-orange-600 to-green-600 text-white"
+                >
+                  Sign up to swap
+                </Button>
+              </Link>
             </div>
           </div>
         </DrawerFooter>
