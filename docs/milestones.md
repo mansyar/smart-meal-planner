@@ -83,12 +83,16 @@
 
 **Goal:** Enable users to view recipes and swap individual meals.
 
+**Status:** ✅ Completed
+
+**Summary:** Implemented AI-powered meal swapping using Google Gemini API. Created SwapMealDialog component that generates 3 alternative meals based on user preferences, nutrition data, and current meal details. Added authentication-aware swap button to RecipeDrawer - authenticated users see "Swap Meal" button that opens the dialog, while non-authenticated users see "Sign up to swap". Server actions handle meal generation and database updates. Demo implementation uses placeholder data but full functionality is ready for production meal plans.
+
 **Tasks:**
 
-- [ ] Recipe details drawer/modal with accordion for steps and table for nutrition
-- [ ] Meal Swap feature using AI API for alternative meals
-- [ ] Update meal plan in DB when user swaps meal
-- [ ] Reflect updated meals immediately in UI
+- [x] Recipe details drawer/modal with accordion for steps and table for nutrition
+- [x] Meal Swap feature using AI API for alternative meals
+- [x] Update meal plan in DB when user swaps meal
+- [x] Reflect updated meals immediately in UI
 
 **Testable Criteria:**
 
