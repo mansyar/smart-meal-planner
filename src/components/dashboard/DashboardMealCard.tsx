@@ -90,9 +90,8 @@ export function DashboardMealCard({
           {onViewRecipe && (
             <Button
               size="sm"
-              variant="outline"
               onClick={() => onViewRecipe(meal)}
-              className="text-xs"
+              className="bg-gradient-to-r from-orange-600 to-green-600 text-white text-xs"
             >
               <ChefHat className="h-3 w-3 mr-1" />
               View

@@ -124,21 +124,30 @@ export async function swapMeal(
       throw new Error("User must be authenticated to swap meals");
     }
 
-    // Check if user is premium (for now, allow all registered users)
-    // TODO: Add premium check when implemented
+    // Validate inputs early to produce clearer errors
+    if (!mealPlanId || typeof mealPlanId !== "string") {
+      throw new Error("Invalid mealPlanId provided");
+    }
+    if (!Number.isInteger(dayOfWeek) || dayOfWeek < 1 || dayOfWeek > 7) {
+      throw new Error("Invalid dayOfWeek provided");
+    }
+    const allowedTypes = ["breakfast", "lunch", "dinner"];
+    if (!allowedTypes.includes(mealType)) {
+      throw new Error("Invalid mealType provided");
+    }
 
-    // Create or update recipe in database
+    // Create recipe in database
     const recipe = await prisma.recipe.create({
       data: {
         title: newMealData.title,
-        ingredients: JSON.stringify(newMealData.ingredients),
-        instructions: JSON.stringify(newMealData.instructions),
-        nutritionData: JSON.stringify(newMealData.nutrition),
+        ingredients: JSON.stringify(newMealData.ingredients ?? []),
+        instructions: JSON.stringify(newMealData.instructions ?? []),
+        nutritionData: JSON.stringify(newMealData.nutrition ?? {}),
         // imageUrl: could be generated or set later
       },
     });
 
-    // Update the meal to point to the new recipe
+    // Attempt to update the meal to point to the new recipe
     const updatedMeal = await prisma.meal.updateMany({
       where: {
         mealPlanId,
@@ -151,8 +160,19 @@ export async function swapMeal(
       },
     });
 
+    // If nothing was updated, clean up the created recipe and return a helpful error
     if (updatedMeal.count === 0) {
-      throw new Error("Meal not found or could not be updated");
+      try {
+        await prisma.recipe.delete({ where: { id: recipe.id } });
+      } catch (cleanupErr) {
+        console.error(
+          "Failed to cleanup recipe after failed swap:",
+          cleanupErr,
+        );
+      }
+      throw new Error(
+        `Meal not found for mealPlanId=${mealPlanId} dayOfWeek=${dayOfWeek} type=${mealType}`,
+      );
     }
 
     return {
@@ -170,6 +190,8 @@ export async function swapMeal(
     };
   } catch (error) {
     console.error("Error swapping meal:", error);
-    throw new Error("Failed to swap meal");
+    // Surface original message where reasonable to aid debugging
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to swap meal: ${msg}`);
   }
 }

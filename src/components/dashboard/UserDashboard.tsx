@@ -1,19 +1,51 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { WeekMealPlan, WeekUtils } from "@/types/meal-plan";
+import {
+  WeekMealPlan,
+  WeekUtils,
+  Meal,
+  NutritionData,
+} from "@/types/meal-plan";
 import { getMealPlan, generateWeeklyMealPlan } from "@/actions/meal-plan";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyMealPlan } from "./EmptyMealPlan";
 import { DashboardMealCard } from "./DashboardMealCard";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import RecipeDrawer from "@/components/meal-plan/RecipeDrawer";
 
 interface UserDashboardProps {
   initialWeekStart?: Date;
 }
+
+/**
+ * DrawerMeal mirrors the demo meal shape expected by RecipeDrawer.
+ * We build this from the real Meal.recipe when opening the drawer.
+ */
+type DrawerMeal = {
+  id?: string;
+  mealPlanId?: string;
+  dayOfWeek?: number;
+  title: string;
+  description?: string;
+  ingredients: string[];
+  instructions: string[];
+  nutrition: {
+    calories: number;
+    protein_g?: number;
+    carbs_g?: number;
+    fat_g?: number;
+    fiber_g?: number;
+  };
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
+  servings?: number;
+  imageUrl?: string;
+  mealType?: "breakfast" | "lunch" | "dinner";
+};
 
 export function UserDashboard({ initialWeekStart }: UserDashboardProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
@@ -22,6 +54,10 @@ export function UserDashboard({ initialWeekStart }: UserDashboardProps) {
   const [mealPlan, setMealPlan] = useState<WeekMealPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+
+  // Drawer state for viewing recipes
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState<DrawerMeal | null>(null);
 
   // Load meal plan for current week
   const loadMealPlan = async (weekStart: Date) => {
@@ -73,6 +109,206 @@ export function UserDashboard({ initialWeekStart }: UserDashboardProps) {
   useEffect(() => {
     loadMealPlan(currentWeekStart);
   }, [currentWeekStart]);
+
+  // Map Meal (from DB/UI) to DrawerMeal expected by RecipeDrawer
+  function toDrawerMeal(meal: Meal): DrawerMeal | null {
+    const r = meal.recipe;
+    if (!r) return null;
+
+    // Normalize nutrition (may be stored as JSON string)
+    function parseNutrition(raw: unknown): NutritionData | undefined {
+      if (!raw) return undefined;
+      if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object")
+            return parsed as NutritionData;
+          return undefined;
+        } catch {
+          return undefined;
+        }
+      }
+      if (typeof raw === "object") return raw as NutritionData;
+      return undefined;
+    }
+    const nutrition = parseNutrition(
+      (r as unknown as Record<string, unknown>).nutritionData,
+    );
+
+    // Normalize ingredients which might be stored as JSON strings in DB
+    function parseStringArray(raw: unknown): string[] {
+      if (!raw) return [];
+      if (Array.isArray(raw))
+        return raw.filter((x): x is string => typeof x === "string");
+      if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed))
+            return parsed.filter((x): x is string => typeof x === "string");
+        } catch {
+          const s = raw as string;
+          if (s.includes("\n"))
+            return s
+              .split("\n")
+              .map((t) => t.trim())
+              .filter(Boolean);
+          return s
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+        }
+      }
+      return [];
+    }
+    const ingredients: string[] = parseStringArray(
+      (r as unknown as Record<string, unknown>).ingredients,
+    );
+
+    // Normalize instructions which might be stored as JSON strings in DB
+    function parseInstructions(raw: unknown): string[] {
+      if (!raw) return [];
+      if (Array.isArray(raw))
+        return raw.filter((x): x is string => typeof x === "string");
+      if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed))
+            return parsed.filter((x): x is string => typeof x === "string");
+        } catch {
+          const s = raw as string;
+          if (s.includes("\n"))
+            return s
+              .split("\n")
+              .map((t) => t.trim())
+              .filter(Boolean);
+          if (s.includes("."))
+            return s
+              .split(".")
+              .map((t) => t.trim())
+              .filter(Boolean);
+          return s
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+        }
+      }
+      return [];
+    }
+    const instructions: string[] = parseInstructions(
+      (r as unknown as Record<string, unknown>).instructions,
+    );
+
+    return {
+      id: r.id,
+      mealPlanId: meal.mealPlanId,
+      dayOfWeek: meal.dayOfWeek,
+      title: r.title,
+      description: r.description,
+      ingredients,
+      instructions,
+      nutrition: {
+        calories: nutrition?.calories ?? 0,
+        protein_g: nutrition?.protein_g,
+        carbs_g: nutrition?.carbs_g,
+        fat_g: nutrition?.fat_g,
+        fiber_g: nutrition?.fiber_g,
+      },
+      prepTimeMinutes: r.prepTimeMinutes,
+      cookTimeMinutes: r.cookTimeMinutes,
+      servings: r.servings,
+      imageUrl: r.imageUrl,
+      mealType: meal.type,
+    };
+  }
+
+  function openMeal(meal: Meal) {
+    const d = toDrawerMeal(meal);
+    if (d) {
+      setSelectedMeal(d);
+      setDrawerOpen(true);
+    }
+  }
+
+  // Robust calories extractor that handles different storage shapes:
+  // - recipe.nutritionData (object or JSON string)
+  // - recipe.nutrition (legacy field)
+  // - demo-style recipe.nutrition field
+  // Falls back to scanning the recipe object for a numeric "calories" value.
+  function getMealCalories(meal?: Meal | null): number {
+    if (!meal?.recipe) return 0;
+
+    const recipeAny = meal.recipe as unknown as Record<string, unknown>;
+
+    // Candidate raw sources
+    const candidates = [
+      recipeAny.nutritionData,
+      recipeAny.nutrition,
+      recipeAny, // last resort: scan the whole object
+    ];
+
+    for (const raw of candidates) {
+      if (raw == null) continue;
+
+      // If it's a string, try to parse JSON
+      if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw);
+          const c = extractCalories(parsed);
+          if (c > 0) return c;
+        } catch {
+          // fallback: ignore parse errors and continue
+        }
+      } else if (typeof raw === "object") {
+        const c = extractCalories(raw);
+        if (c > 0) return c;
+      } else if (typeof raw === "number") {
+        // unlikely, but handle numeric direct value
+        return Number.isFinite(raw) ? raw : 0;
+      }
+    }
+
+    return 0;
+
+    // Helper: shallow search for a numeric calories field
+    function extractCalories(obj: unknown): number {
+      if (!obj || typeof obj !== "object") return 0;
+      const o = obj as Record<string, unknown>;
+
+      // direct calories
+      const direct = o["calories"];
+      if (typeof direct === "number" && Number.isFinite(direct)) return direct;
+
+      // nested nutrition object
+      const nutritionVal = o["nutrition"];
+      if (nutritionVal && typeof nutritionVal === "object") {
+        const n = nutritionVal as Record<string, unknown>;
+        const c = n["calories"];
+        if (typeof c === "number" && Number.isFinite(c)) return c;
+      }
+
+      // search for keys with "calor" or nested calories
+      for (const k of Object.keys(o)) {
+        try {
+          const v = o[k];
+          if (
+            typeof v === "number" &&
+            Number.isFinite(v) &&
+            k.toLowerCase().includes("calor")
+          ) {
+            return v;
+          }
+          if (v && typeof v === "object") {
+            const vv = v as Record<string, unknown>;
+            const c2 = vv["calories"];
+            if (typeof c2 === "number" && Number.isFinite(c2)) return c2;
+          }
+        } catch {
+          continue;
+        }
+      }
+      return 0;
+    }
+  }
 
   if (loading) {
     return (
@@ -155,40 +391,53 @@ export function UserDashboard({ initialWeekStart }: UserDashboardProps) {
         </div>
       </div>
 
-      {/* Meal plan grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {mealPlan.days.map((day) => (
-          <Card key={day.day} className="h-fit">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-between">
-                {day.day}
-                {isCurrentWeek && WeekUtils.isCurrentWeek(day.date) && (
-                  <Badge variant="secondary" className="text-xs">
-                    Today
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {Object.entries(day.meals).map(([mealType, meal]) => (
-                <div key={mealType}>
-                  {meal ? (
+      {/* Info banner matching demo */}
+      <div className="mt-4 rounded-md bg-gradient-to-r from-orange-50 to-green-50 p-3 text-sm text-gray-700 border border-gray-100">
+        Tip: Click a meal to view its recipe or swap it.
+      </div>
+
+      {/* Tabs per day (demo-style) */}
+      <section>
+        <Tabs defaultValue={mealPlan.days[0]?.day ?? "Monday"}>
+          <TabsList className="mb-4 overflow-x-auto space-x-2">
+            {mealPlan.days.map((d) => (
+              <TabsTrigger
+                key={d.day}
+                value={d.day}
+                className="min-w-[96px] rounded-md px-3 py-2 text-sm [data-state=active]:bg-gradient-to-r [data-state=active]:from-orange-600 [data-state=active]:to-green-600 [data-state=active]:text-white"
+              >
+                {d.day}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {mealPlan.days.map((d) => (
+            <TabsContent key={d.day} value={d.day}>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
+                {(["breakfast", "lunch", "dinner"] as const).map((type) => {
+                  const m = d.meals[type];
+                  return m ? (
                     <DashboardMealCard
-                      meal={meal}
-                      mealType={mealType as "breakfast" | "lunch" | "dinner"}
+                      key={type}
+                      meal={m}
+                      mealType={type}
+                      onViewRecipe={openMeal}
                       compact
                     />
                   ) : (
-                    <div className="text-sm text-muted-foreground italic">
-                      No {mealType} planned
+                    <div
+                      key={type}
+                      className="text-sm text-muted-foreground italic"
+                    >
+                      No {type} planned
                     </div>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </section>
 
       {/* Weekly summary */}
       <Card>
@@ -232,19 +481,19 @@ export function UserDashboard({ initialWeekStart }: UserDashboardProps) {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {Math.round(
-                  mealPlan.days.reduce(
-                    (total, day) =>
+                {(() => {
+                  const totalCalories = mealPlan.days.reduce((total, day) => {
+                    return (
                       total +
-                      Object.values(day.meals).reduce(
-                        (dayTotal, meal) =>
-                          dayTotal +
-                          (meal?.recipe?.nutritionData?.calories || 0),
-                        0,
-                      ),
-                    0,
-                  ) / mealPlan.days.length,
-                )}
+                      Object.values(day.meals).reduce((dayTotal, meal) => {
+                        return dayTotal + getMealCalories(meal ?? null);
+                      }, 0)
+                    );
+                  }, 0);
+                  return Math.round(
+                    totalCalories / Math.max(1, mealPlan.days.length),
+                  );
+                })()}
               </div>
               <div className="text-sm text-muted-foreground">
                 Avg Daily Calories
@@ -253,6 +502,18 @@ export function UserDashboard({ initialWeekStart }: UserDashboardProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Recipe Drawer */}
+      <RecipeDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        meal={selectedMeal ?? undefined}
+        enableSwap={true}
+        onMealSwapped={() => {
+          // Refresh the current week's meal plan after a successful swap
+          loadMealPlan(currentWeekStart);
+        }}
+      />
     </div>
   );
 }

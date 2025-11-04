@@ -20,14 +20,41 @@ import {
 } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import SwapMealDialog from "./SwapMealDialog";
-import type { DemoMeal } from "@/data/demo-meal-plan";
 import Image from "next/image";
+
+/**
+ * Lightweight meal shape accepted by the drawer. This covers both demo meals
+ * and real meals adapted from the database. Using a permissive typed shape
+ * avoids tight coupling to DemoMeal while keeping useful fields typed.
+ */
+type DrawerMealShape = {
+  id?: string;
+  mealPlanId?: string;
+  dayOfWeek?: number;
+  title?: string;
+  description?: string;
+  ingredients?: string[];
+  instructions?: string[];
+  nutrition?: {
+    calories?: number;
+    protein_g?: number;
+    carbs_g?: number;
+    fat_g?: number;
+    fiber_g?: number;
+  };
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
+  servings?: number;
+  imageUrl?: string;
+  mealType?: "breakfast" | "lunch" | "dinner";
+};
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  meal?: DemoMeal | null;
-  enableSwap?: boolean; // Only enable swap for real meal plans (not demo)
+  meal?: DrawerMealShape | null;
+  enableSwap?: boolean;
+  onMealSwapped?: () => void;
 };
 
 export default function RecipeDrawer({
@@ -35,6 +62,7 @@ export default function RecipeDrawer({
   onOpenChange,
   meal,
   enableSwap = false,
+  onMealSwapped,
 }: Props) {
   const { data: session } = useSession();
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
@@ -89,24 +117,26 @@ export default function RecipeDrawer({
                 <TableBody>
                   <TableRow>
                     <TableCell>Calories</TableCell>
-                    <TableCell>{meal.nutrition.calories} kcal</TableCell>
+                    <TableCell>
+                      {meal?.nutrition?.calories ?? "—"} kcal
+                    </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>Protein</TableCell>
-                    <TableCell>{meal.nutrition.protein_g} g</TableCell>
+                    <TableCell>{meal?.nutrition?.protein_g ?? "—"} g</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>Carbs</TableCell>
-                    <TableCell>{meal.nutrition.carbs_g} g</TableCell>
+                    <TableCell>{meal?.nutrition?.carbs_g ?? "—"} g</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>Fat</TableCell>
-                    <TableCell>{meal.nutrition.fat_g} g</TableCell>
+                    <TableCell>{meal?.nutrition?.fat_g ?? "—"} g</TableCell>
                   </TableRow>
-                  {meal.nutrition.fiber_g !== undefined && (
+                  {meal?.nutrition?.fiber_g !== undefined && (
                     <TableRow>
                       <TableCell>Fiber</TableCell>
-                      <TableCell>{meal.nutrition.fiber_g} g</TableCell>
+                      <TableCell>{meal?.nutrition?.fiber_g} g</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -121,9 +151,14 @@ export default function RecipeDrawer({
                 <AccordionTrigger>Ingredients</AccordionTrigger>
                 <AccordionContent>
                   <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-gray-300">
-                    {meal?.ingredients.map((ing, idx) => (
-                      <li key={idx}>{ing}</li>
-                    )) ?? <li>—</li>}
+                    {Array.isArray(meal?.ingredients) &&
+                    meal!.ingredients.length > 0 ? (
+                      meal!.ingredients.map((ing, idx) => (
+                        <li key={idx}>{ing}</li>
+                      ))
+                    ) : (
+                      <li>—</li>
+                    )}
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -132,9 +167,14 @@ export default function RecipeDrawer({
                 <AccordionTrigger>Instructions</AccordionTrigger>
                 <AccordionContent>
                   <ol className="list-decimal pl-5 text-sm text-gray-700 dark:text-gray-300 space-y-2">
-                    {meal?.instructions.map((step, idx) => (
-                      <li key={idx}>{step}</li>
-                    )) ?? <li>—</li>}
+                    {Array.isArray(meal?.instructions) &&
+                    meal!.instructions.length > 0 ? (
+                      meal!.instructions.map((step, idx) => (
+                        <li key={idx}>{step}</li>
+                      ))
+                    ) : (
+                      <li>—</li>
+                    )}
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -201,23 +241,20 @@ export default function RecipeDrawer({
           open={swapDialogOpen}
           onOpenChange={setSwapDialogOpen}
           currentMeal={{
-            title: meal.title,
-            type: meal.mealType || "meal",
-            ingredients: meal.ingredients,
-            nutrition: { calories: meal.nutrition.calories },
+            title: meal.title ?? "Recipe",
+            type: meal.mealType ?? "meal",
+            ingredients: meal.ingredients ?? [],
+            nutrition: { calories: meal.nutrition?.calories ?? 0 },
           }}
-          mealPlanId="demo-meal-plan" // This will be replaced with real meal plan ID in dashboard
-          dayOfWeek={1} // This will be replaced with real day in dashboard
-          mealType={meal.mealType || "lunch"} // This will be replaced with real meal type in dashboard
+          mealPlanId={meal.mealPlanId ?? ""} // forwarded from dashboard
+          dayOfWeek={meal.dayOfWeek ?? 1} // forwarded from dashboard
+          mealType={meal.mealType || "lunch"}
           userPreferences={{
             dietType: undefined, // Will be fetched from user profile in dashboard
             allergies: undefined,
             calorieGoal: undefined,
           }}
-          onMealSwapped={() => {
-            // In dashboard implementation, this would refresh the meal plan data
-            console.log("Meal swapped");
-          }}
+          onMealSwapped={onMealSwapped}
         />
       )}
     </Drawer>

@@ -21,6 +21,13 @@ const prisma = new PrismaClient();
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
 
+function normalizeWeekStart(date: Date): Date {
+  const d = new Date(date);
+  // Normalize to UTC midnight to avoid timezone mismatches between stored and computed weekStart
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
 /**
  * Generate a weekly meal plan using AI
  */
@@ -64,7 +71,7 @@ export async function generateWeeklyMealPlan(
     // Generate meal plan using AI
     const mealPlan = await generateMealPlanWithAI({
       userId,
-      weekStart,
+      weekStart: normalizeWeekStart(weekStart),
       preferences,
     });
 
@@ -103,7 +110,7 @@ export async function getMealPlan(
       where: {
         userId_weekStart: {
           userId,
-          weekStart,
+          weekStart: normalizeWeekStart(weekStart),
         },
       },
       include: {
@@ -337,7 +344,7 @@ async function saveMealPlanToDatabase(
     const dbMealPlan = await tx.mealPlan.create({
       data: {
         userId,
-        weekStart: mealPlan.weekStart,
+        weekStart: normalizeWeekStart(mealPlan.weekStart),
       },
     });
 
