@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PrismaClient } from "@/generated/prisma";
 import { headers } from "next/headers";
+import { rateLimiter } from "@/lib/rate-limiter";
 
 const prisma = new PrismaClient();
 
@@ -42,12 +43,50 @@ export async function generateMealAlternatives(
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+    // Merge provided preferences with the user's saved profile when available.
+    // This keeps the client lightweight: callers may pass partial preferences or none.
+    const mergedPreferences: {
+      dietType?: string | undefined;
+      allergies?: string | undefined;
+      calorieGoal?: number | undefined;
+    } = { ...(userPreferences ?? {}) };
+
+    try {
+      const session = await auth.api.getSession({ headers: await headers() });
+      if (session?.user?.id) {
+        const profile = await prisma.profile.findUnique({
+          where: { userId: session.user.id },
+        });
+        if (profile) {
+          if (!mergedPreferences.dietType && profile.dietType) {
+            mergedPreferences.dietType = profile.dietType;
+          }
+          if (
+            (!mergedPreferences.allergies ||
+              mergedPreferences.allergies === "") &&
+            profile.allergies
+          ) {
+            mergedPreferences.allergies = profile.allergies;
+          }
+          if (
+            !mergedPreferences.calorieGoal &&
+            typeof profile.calorieGoal === "number"
+          ) {
+            mergedPreferences.calorieGoal = profile.calorieGoal;
+          }
+        }
+      }
+    } catch (e) {
+      // Non-fatal: if profile lookup fails, continue with provided preferences
+      console.warn("Could not load profile for meal alternatives:", e);
+    }
+
     const prompt = `Generate 3 alternative meal suggestions to replace "${currentMeal.title}" (${currentMeal.type}).
 
 User preferences:
-- Diet type: ${userPreferences.dietType || "No specific diet"}
-- Allergies: ${userPreferences.allergies || "None"}
-- Daily calorie goal: ${userPreferences.calorieGoal || "No specific goal"}
+- Diet type: ${mergedPreferences.dietType || "No specific diet"}
+- Allergies: ${mergedPreferences.allergies || "None"}
+- Daily calorie goal: ${mergedPreferences.calorieGoal || "No specific goal"}
 
 Current meal details:
 - Type: ${currentMeal.type}
@@ -131,9 +170,30 @@ export async function swapMeal(
     if (!Number.isInteger(dayOfWeek) || dayOfWeek < 1 || dayOfWeek > 7) {
       throw new Error("Invalid dayOfWeek provided");
     }
-    const allowedTypes = ["breakfast", "lunch", "dinner"];
+    const allowedTypes = ["breakfast", "lunch", "dinner", "snack"];
     if (!allowedTypes.includes(mealType)) {
       throw new Error("Invalid mealType provided");
+    }
+
+    // Authorization: ensure the authenticated user owns the meal plan
+    const userId = session.user.id;
+
+    // Rate limit swap calls to protect AI quota
+    try {
+      rateLimiter.checkLimit(userId, "swap_meal");
+    } catch (rlErr) {
+      const msg =
+        rlErr instanceof Error ? rlErr.message : "Rate limit exceeded";
+      throw new Error(msg);
+    }
+
+    const plan = await prisma.mealPlan.findUnique({
+      where: { id: mealPlanId },
+      select: { userId: true },
+    });
+
+    if (!plan || plan.userId !== userId) {
+      throw new Error("Not authorized to modify this meal plan");
     }
 
     // Create recipe in database
@@ -147,12 +207,13 @@ export async function swapMeal(
       },
     });
 
-    // Attempt to update the meal to point to the new recipe
+    // Attempt to update the meal to point to the new recipe (defense-in-depth: ensure meal belongs to user's plan)
     const updatedMeal = await prisma.meal.updateMany({
       where: {
         mealPlanId,
         dayOfWeek,
         type: mealType,
+        mealPlan: { userId },
       },
       data: {
         recipeId: recipe.id,
