@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { NutritionData } from "@/types/meal-plan";
 
 import { Loader2, Clock, Users } from "lucide-react";
 import {
@@ -28,17 +29,32 @@ type Props = {
     title: string;
     type: string;
     ingredients: string[];
-    nutrition: { calories: number };
+    nutrition: NutritionData;
   };
   mealPlanId: string;
   dayOfWeek: number;
-  mealType: string;
+  mealType: "breakfast" | "lunch" | "dinner";
   userPreferences: {
     dietType?: string;
     allergies?: string;
     calorieGoal?: number;
   };
-  onMealSwapped?: () => void;
+  // onMealSwapped receives the created recipe payload + day/meal info for optimistic UI updates
+  onMealSwapped?: (payload: {
+    recipe: {
+      id: string;
+      title: string;
+      description?: string;
+      ingredients: string[];
+      instructions: string[];
+      nutrition: NutritionData | undefined;
+      prepTimeMinutes?: number;
+      cookTimeMinutes?: number;
+      servings?: number;
+    };
+    dayOfWeek: number;
+    mealType: "breakfast" | "lunch" | "dinner";
+  }) => void;
 };
 
 export default function SwapMealDialog({
@@ -91,8 +107,16 @@ export default function SwapMealDialog({
 
         if (result.success) {
           toast.success("Meal swapped successfully!");
+          // Optimistic update: notify parent with returned recipe payload so it can update local state immediately
+          if (result.recipe) {
+            onMealSwapped?.({
+              recipe: result.recipe,
+              dayOfWeek,
+              mealType,
+            });
+          }
           onOpenChange(false);
-          onMealSwapped?.();
+          // still refresh in background to ensure canonical state
           router.refresh();
         } else {
           toast.error("Failed to swap meal. Please try again.");

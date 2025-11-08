@@ -22,7 +22,7 @@ model User {
   image         String?
   isPremium      Boolean    @default(false)
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  updatedAt     DateTime   @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
   profile        Profile?
@@ -120,25 +120,27 @@ model Meal {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   @@unique([mealPlanId, dayOfWeek, type]) // one meal of each type per day per meal plan
-
 }
 
 /// --------------------
 /// Recipes
 /// --------------------
 model Recipe {
-  id            String     @id @default(cuid())
-  title         String
-  ingredients   String     // JSON string or comma-separated
-  instructions  String
-  nutritionData String     // JSON string: calories, protein, carbs, fat
-  imageUrl      String?    // optional image stored in Cloudflare R2
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
+  id              String     @id @default(cuid())
+  title           String
+  description     String?    // optional longer description returned by AI
+  ingredients     Json       // structured ingredients array
+  instructions    Json       // structured steps array
+  nutritionData   Json       // structured nutrition object: calories, protein, carbs, fat
+  prepTimeMinutes Int?       // optional prep time in minutes
+  cookTimeMinutes Int?       // optional cook time in minutes
+  servings        Int?       // optional number of servings
+  imageUrl        String?    // optional image stored in Cloudflare R2
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
 
   // Relation
-  meals         Meal[]
+  meals           Meal[]
 }
 
 /// --------------------
@@ -161,5 +163,5 @@ model ShoppingItem {
   quantity       String     // e.g., "2 cups", "500g"
   category       String?    // e.g., Fruits, Meats, Spices
   createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  updatedAt      DateTime   @default(now()) @updatedAt
 }

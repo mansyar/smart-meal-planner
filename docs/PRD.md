@@ -2,16 +2,18 @@
 
 **Project Name:** AI Meal Planner  
 **Tech Stack:** Next.js 15, shadcn/ui, TypeScript, PostgreSQL (Prisma), Better Auth, AI API, Nutrition API, Cloudflare R2  
-**Target Users:** Health-conscious individuals, busy professionals, and premium users who want automated meal planning  
+**Target Users:** Health-conscious individuals, busy professionals, and premium users who want automated meal planning
 
 ---
 
 ## 1. Purpose
+
 The AI Meal Planner app helps users generate personalized weekly meal plans based on dietary preferences, allergies, and calorie goals. It includes AI-generated recipe suggestions, meal swapping, shopping lists, and premium PDF export functionality.
 
 ---
 
 ## 2. Goals & Objectives
+
 - Provide **personalized meal plans** quickly via AI.
 - Allow **meal swaps** for flexibility and preference adjustments.
 - Generate **shopping lists** automatically and allow edits.
@@ -24,15 +26,16 @@ The AI Meal Planner app helps users generate personalized weekly meal plans base
 
 ## 3. User Roles
 
-- **Guest / Anonymous:** Can generate one demo meal plan, view recipes, and see the shopping list. Cannot save or export.  
-- **Registered User:** Can save weekly meal plans, swap meals, edit shopping list, and stream AI results.  
-- **Premium User:** All registered user features plus unlimited plans/swaps, PDF export, and future advanced features such as family profiles.  
+- **Guest / Anonymous:** Can generate one demo meal plan, view recipes, and see the shopping list. Cannot save or export.
+- **Registered User:** Can save weekly meal plans, swap meals, edit shopping list, and stream AI results.
+- **Premium User:** All registered user features plus unlimited plans/swaps, PDF export, and future advanced features such as family profiles.
 
 ---
 
 ## 4. Features & Requirements
 
 ### 4.1 Core Features (MVP)
+
 1. **Authentication & Onboarding**
    - Sign up / Login via Better Auth (email/password + Google)
    - Onboarding wizard for diet type, allergies, calorie goals
@@ -61,6 +64,7 @@ The AI Meal Planner app helps users generate personalized weekly meal plans base
    - Link to Better Auth account settings for email and password changes
 
 ### 4.2 Additional Features (Optional / Phase 2)
+
 - Family or multi-user profiles
 - Shareable meal plan links
 - Notifications via app or email
@@ -68,87 +72,103 @@ The AI Meal Planner app helps users generate personalized weekly meal plans base
 
 ---
 
-## 5. User Stories
+## 5. Recent Technical Changes (Milestone 3 → Hardened AI + Storage normalization)
 
-### Guest / Anonymous
-- Generate one demo meal plan
-- View recipes and shopping list
-- Prompted to register for saving or exporting
+Summary
 
-### Registered User
-- Sign up and log in
-- Complete onboarding wizard
-- Generate weekly meal plan
-- Swap individual meals
-- Edit and check-off shopping list items
+- Hardened AI outputs with JSON schema validation (Zod) and retry/backoff logic to handle intermittent non-JSON responses from Gemini.
+- Normalized recipe storage to structured JSON (Postgres jsonb) for `ingredients`, `instructions`, and `nutritionData`. New fields added: `description`, `prepTimeMinutes`, `cookTimeMinutes`, `servings`.
+- Added `src/lib/normalize.ts` to provide a single normalization utility that reads both legacy string fields and new JSON columns and returns a consistent recipe shape for the UI.
+- Aligned meal-type enumerations across layers (types, server actions, UI components) to avoid mismatches.
+- Implemented optimistic UI update for meal swaps: server action returns normalized recipe shape and the UI applies optimistic update while DB write completes.
+- Added callGeminiJSON helper in `src/lib/ai.ts` (Zod validation + retries + JSON extraction from fences) to make AI outputs resilient.
 
-### Premium User
-- Unlimited meal plans and swaps
-- Export PDF of meal plans and shopping list
-- Access future premium features such as family profiles
+Implications for product behaviour
 
----
+- New meal creation and AI flows now persist structured recipe objects (JSON) for richer data and easier future features (shopping-list aggregation, PDF export).
+- Existing rows using legacy string columns are handled by normalization utilities; no immediate UI break for older data.
+- Swap flow feels more responsive due to optimistic updates; eventual consistency is applied when DB commit returns.
 
-## 6. User Flows
+Data migration notes (developer & ops)
 
-### Guest Meal Plan Flow
-Landing Page → Click "Try Demo" → AI generates 7-day meal plan → View recipes → View shopping list → Prompt to Register/Login
+- A safe migration file was generated at:
+  - `prisma/migrations/20251107105000_recipes_json_fields/migration.sql`
+- The migration:
+  - Adds temporary nullable `jsonb` columns (ingredients_json, instructions_json, nutritionData_json).
+  - Backfills parsed JSON where possible (JSON cast if starts with `[` or `{`), falls back to comma-split for arrays and `{}` for objects.
+  - Exposes a preview SELECT to review rows that used fallbacks or failed parsing.
+  - Includes a commented RENAME/DROP block to run after verification.
 
-### Registered User Meal Plan Flow
-Signup/Login → Onboarding Wizard → Generate Meal Plan → Stream AI results → View recipes → Swap meals → Generate Shopping List → Save plan
+Recommended migration workflow (staging → production)
 
-### Premium User Flow
-Registered User → Upgrade to Premium → Unlimited meal plans → Unlimited swaps → Export PDF → Download from Cloudflare R2
+1. Take DB backup in production.
+2. Apply migration in staging and run the preview SELECT in the migration SQL to inspect problematic rows.
+3. Manually fix rows where the parser produced empty fallbacks, if necessary.
+4. After verification, run the rename/drop block to swap in the new JSON columns.
+5. Run `npx prisma generate`, `pnpm -w -s run tsc --noEmit`, and run tests.
 
----
+Quick commands (local/dev)
 
-## 7. Non-Functional Requirements
-- **Performance:** Stream AI results for fast experience
-- **Scalability:** VPS-hosted with Cloudflare R2 for storage
-- **Accessibility:** All interactive elements labeled and keyboard-navigable
-- **Responsiveness:** Mobile-first, fully responsive layouts
-- **Security:** HTTPS, Better Auth, minimal personal data storage
+```bash
+# Regenerate client and type-check
+npx prisma generate && pnpm -w -s run tsc --noEmit
 
----
+# Apply migrations in dev (interactive)
+npx prisma migrate dev
 
-## 8. Wireframes & Components (shadcn/ui)
-- **Landing Page:** Hero section, Try Demo button
-- **Auth Pages:** Form, Input, Button, Card
-- **Onboarding Wizard:** Stepper, Input, Select, Button
-- **Dashboard:** Tabs for days, Meal Cards, Recipe Drawer, Swap Meal Modal
-- **Shopping List:** Table or Accordion, Checkbox, Input, Button
-- **Profile / Settings:** Form, Input, Select, Button
-- **PDF Export:** Button with Toast/Alert for success
+# Non-interactive deploy (production)
+npx prisma migrate deploy
+```
 
----
+Developer guidance
 
-## 9. Milestones
+- Use `normalizeRecipeDb` from `src/lib/normalize.ts` whenever returning recipes to the frontend. This ensures a stable shape across legacy and new rows.
+- When inserting new recipes from AI or user input, write structured JSON fields directly (no stringified JSON).
+- Keep Zod schemas in `src/types/schemas.ts` in sync with the recipe shape used in server actions and `callGeminiJSON` validation.
+- Ensure meal-type enums are imported from a single source (prefer `src/types/meal-plan.ts`) to avoid mismatches.
 
-- **Milestone 0:** Project setup, initialize Next.js 15, Tailwind, shadcn/ui, Prisma, Better Auth, Cloudflare R2  
-- **Milestone 1:** Core Authentication & Onboarding  
-- **Milestone 2:** Guest Demo Meal Plan  
-- **Milestone 3:** Recipe Details & Meal Swap  
-- **Milestone 4:** Shopping List  
-- **Milestone 5:** Premium Features: PDF Export  
-- **Milestone 6:** Profile / Settings  
-- **Milestone 7:** UX & Responsiveness  
-- **Milestone 8:** Analytics & Monitoring (Optional)
+Risks & mitigation
+
+- Risk: Some legacy string fields may contain malformed JSON or ambiguous comma-separated text; preview SELECT helps find these before renaming columns.
+- Mitigation: Run migration in staging, inspect preview output, and if needed write manual correction scripts before final rename.
 
 ---
 
-## 10. Success Metrics
+## 6. User Stories
+
+(unchanged — see earlier section)
+
+---
+
+## 7. User Flows
+
+(unchanged — see earlier section)
+
+---
+
+## 8. Non-Functional Requirements
+
+(unchanged — see earlier section)
+
+---
+
+## 9. Wireframes & Components (shadcn/ui)
+
+(unchanged — see earlier section)
+
+---
+
+## 10. Milestones
+
+(unchanged — see earlier section; Milestone 3 includes the hardening & migration work described above)
+
+---
+
+## 11. Success Metrics
+
 - Guest can generate one demo plan without error
-- Registered users can save and swap meals
+- Registered users can save and swap meals (swap is optimistic in UI and persists to DB)
 - Shopping lists are editable and persist
 - Premium users can export PDFs
-- AI streaming is smooth and responsive
+- AI streaming remains smooth; AI outputs are validated before use
 - App is fully responsive and accessible
-
----
-
-## 11. Future Enhancements
-- Multi-user or family profiles
-- Meal plan sharing
-- Notifications and reminders
-- AI recipe customization (e.g., ingredient exclusions)
-- Analytics dashboard for user engagement

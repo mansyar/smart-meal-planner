@@ -6,6 +6,7 @@ import {
   WeekUtils,
   Meal,
   NutritionData,
+  Recipe,
 } from "@/types/meal-plan";
 import { getMealPlan, generateWeeklyMealPlan } from "@/actions/meal-plan";
 import { Button } from "@/components/ui/button";
@@ -509,9 +510,59 @@ export function UserDashboard({ initialWeekStart }: UserDashboardProps) {
         onOpenChange={setDrawerOpen}
         meal={selectedMeal ?? undefined}
         enableSwap={true}
-        onMealSwapped={() => {
-          // Refresh the current week's meal plan after a successful swap
-          loadMealPlan(currentWeekStart);
+        onMealSwapped={(payload) => {
+          // Optimistic update: apply returned recipe to local state immediately
+          try {
+            if (payload?.recipe) {
+              setMealPlan((prev) => {
+                if (!prev) return prev;
+                const days = prev.days.map((d) => ({
+                  ...d,
+                  meals: { ...d.meals },
+                }));
+                const dayIndex = days.findIndex(
+                  (dd) => dd.dayOfWeek === payload.dayOfWeek,
+                );
+                if (dayIndex === -1) return prev;
+                const key = payload.mealType as keyof (typeof days)[0]["meals"];
+                // Build normalized recipe object expected by UI
+                const normalizedRecipe = {
+                  id: payload.recipe.id,
+                  title: payload.recipe.title,
+                  description: payload.recipe.description,
+                  ingredients: payload.recipe.ingredients,
+                  instructions: payload.recipe.instructions,
+                  nutritionData: payload.recipe.nutrition,
+                  prepTimeMinutes: payload.recipe.prepTimeMinutes,
+                  servings: payload.recipe.servings,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                };
+                const existingMeal = days[dayIndex].meals[key];
+                const updatedMeal = existingMeal
+                  ? {
+                      ...existingMeal,
+                      recipe: normalizedRecipe as unknown as Recipe,
+                    }
+                  : {
+                      id: "",
+                      mealPlanId: "",
+                      dayOfWeek: payload.dayOfWeek,
+                      type: payload.mealType,
+                      recipe: normalizedRecipe as unknown as Recipe,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    };
+                days[dayIndex].meals[key] = updatedMeal as unknown as Meal;
+                return { ...prev, days };
+              });
+            }
+          } catch (e) {
+            console.warn("Optimistic update failed:", e);
+          } finally {
+            // Refresh canonical state in background
+            loadMealPlan(currentWeekStart);
+          }
         }}
       />
     </div>

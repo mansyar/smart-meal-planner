@@ -1,14 +1,14 @@
 "use server";
 
 import { auth } from "@/lib/auth";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PrismaClient } from "@/generated/prisma";
 import { headers } from "next/headers";
 import { rateLimiter } from "@/lib/rate-limiter";
+import { callGeminiJSON } from "@/lib/ai";
+import { AlternativesArraySchema, AlternativesArray } from "@/types/schemas";
+import { normalizeRecipeDb } from "@/lib/normalize";
 
 const prisma = new PrismaClient();
-
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
 
 export interface MealAlternative {
   title: string;
@@ -41,10 +41,7 @@ export async function generateMealAlternatives(
   },
 ): Promise<MealAlternative[]> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
     // Merge provided preferences with the user's saved profile when available.
-    // This keeps the client lightweight: callers may pass partial preferences or none.
     const mergedPreferences: {
       dietType?: string | undefined;
       allergies?: string | undefined;
@@ -103,28 +100,19 @@ For each alternative meal, provide:
 7. Cook time in minutes (if applicable)
 8. Number of servings (assume 1)
 
-Return the response as a valid JSON array of meal objects. Each meal should have these exact properties: title, description, ingredients (array), instructions (array), nutrition (object), prepTimeMinutes, cookTimeMinutes, servings.
+Return the response as a valid JSON array (no surrounding text) matching this schema:
+[ { title, description, ingredients, instructions, nutrition, prepTimeMinutes, cookTimeMinutes, servings } ]
 
 Ensure meals are healthy, balanced, and suitable for the user's preferences. Keep calorie counts reasonable for a single meal.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // Use helper to call Gemini and validate JSON using Zod schema
+    const alternatives = await callGeminiJSON<AlternativesArray>(
+      prompt,
+      AlternativesArraySchema,
+      3,
+    );
 
-    // Extract JSON from the response
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      throw new Error("Failed to parse JSON from Gemini response");
-    }
-
-    const alternatives: MealAlternative[] = JSON.parse(jsonMatch[0]);
-
-    // Validate the response structure
-    if (!Array.isArray(alternatives) || alternatives.length === 0) {
-      throw new Error("Invalid response format from Gemini");
-    }
-
-    // Ensure each alternative has required properties
+    // Map to our internal MealAlternative shape and provide sane defaults
     return alternatives.map((alt) => ({
       title: alt.title || "Alternative Meal",
       description: alt.description || "A healthy meal alternative",
@@ -137,9 +125,9 @@ Ensure meals are healthy, balanced, and suitable for the user's preferences. Kee
         fat_g: alt.nutrition?.fat_g || 15,
         fiber_g: alt.nutrition?.fiber_g || 5,
       },
-      prepTimeMinutes: alt.prepTimeMinutes || 10,
-      cookTimeMinutes: alt.cookTimeMinutes || 15,
-      servings: alt.servings || 1,
+      prepTimeMinutes: alt.prepTimeMinutes ?? 10,
+      cookTimeMinutes: alt.cookTimeMinutes ?? 15,
+      servings: alt.servings ?? 1,
     }));
   } catch (error) {
     console.error("Error generating meal alternatives:", error);
@@ -150,7 +138,7 @@ Ensure meals are healthy, balanced, and suitable for the user's preferences. Kee
 export async function swapMeal(
   mealPlanId: string,
   dayOfWeek: number,
-  mealType: string,
+  mealType: "breakfast" | "lunch" | "dinner",
   newMealData: MealAlternative,
 ) {
   try {
@@ -160,19 +148,22 @@ export async function swapMeal(
     });
 
     if (!session?.user?.id) {
-      throw new Error("User must be authenticated to swap meals");
+      return {
+        success: false,
+        error: "User must be authenticated to swap meals",
+      };
     }
 
     // Validate inputs early to produce clearer errors
     if (!mealPlanId || typeof mealPlanId !== "string") {
-      throw new Error("Invalid mealPlanId provided");
+      return { success: false, error: "Invalid mealPlanId provided" };
     }
     if (!Number.isInteger(dayOfWeek) || dayOfWeek < 1 || dayOfWeek > 7) {
-      throw new Error("Invalid dayOfWeek provided");
+      return { success: false, error: "Invalid dayOfWeek provided" };
     }
-    const allowedTypes = ["breakfast", "lunch", "dinner", "snack"];
+    const allowedTypes = ["breakfast", "lunch", "dinner"] as const;
     if (!allowedTypes.includes(mealType)) {
-      throw new Error("Invalid mealType provided");
+      return { success: false, error: "Invalid mealType provided" };
     }
 
     // Authorization: ensure the authenticated user owns the meal plan
@@ -184,7 +175,7 @@ export async function swapMeal(
     } catch (rlErr) {
       const msg =
         rlErr instanceof Error ? rlErr.message : "Rate limit exceeded";
-      throw new Error(msg);
+      return { success: false, error: msg };
     }
 
     const plan = await prisma.mealPlan.findUnique({
@@ -193,16 +184,23 @@ export async function swapMeal(
     });
 
     if (!plan || plan.userId !== userId) {
-      throw new Error("Not authorized to modify this meal plan");
+      return {
+        success: false,
+        error: "Not authorized to modify this meal plan",
+      };
     }
 
-    // Create recipe in database
+    // Create recipe in database using structured JSON fields (schema migrated to Json).
     const recipe = await prisma.recipe.create({
       data: {
         title: newMealData.title,
-        ingredients: JSON.stringify(newMealData.ingredients ?? []),
-        instructions: JSON.stringify(newMealData.instructions ?? []),
-        nutritionData: JSON.stringify(newMealData.nutrition ?? {}),
+        description: newMealData.description ?? undefined,
+        ingredients: newMealData.ingredients ?? [],
+        instructions: newMealData.instructions ?? [],
+        nutritionData: newMealData.nutrition ?? {},
+        prepTimeMinutes: newMealData.prepTimeMinutes ?? undefined,
+        cookTimeMinutes: newMealData.cookTimeMinutes ?? undefined,
+        servings: newMealData.servings ?? undefined,
         // imageUrl: could be generated or set later
       },
     });
@@ -231,28 +229,19 @@ export async function swapMeal(
           cleanupErr,
         );
       }
-      throw new Error(
-        `Meal not found for mealPlanId=${mealPlanId} dayOfWeek=${dayOfWeek} type=${mealType}`,
-      );
+      return {
+        success: false,
+        error: `Meal not found for mealPlanId=${mealPlanId} dayOfWeek=${dayOfWeek} type=${mealType}`,
+      };
     }
 
     return {
       success: true,
-      recipe: {
-        id: recipe.id,
-        title: recipe.title,
-        ingredients: newMealData.ingredients,
-        instructions: newMealData.instructions,
-        nutrition: newMealData.nutrition,
-        prepTimeMinutes: newMealData.prepTimeMinutes,
-        cookTimeMinutes: newMealData.cookTimeMinutes,
-        servings: newMealData.servings,
-      },
+      recipe: normalizeRecipeDb(recipe),
     };
   } catch (error) {
     console.error("Error swapping meal:", error);
-    // Surface original message where reasonable to aid debugging
     const msg = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to swap meal: ${msg}`);
+    return { success: false, error: `Failed to swap meal: ${msg}` };
   }
 }

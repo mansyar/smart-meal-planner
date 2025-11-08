@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { NutritionData } from "@/types/meal-plan";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import {
@@ -35,7 +36,15 @@ type DrawerMealShape = {
   description?: string;
   ingredients?: string[];
   instructions?: string[];
+  // Normalized nutrition object (preferred) and legacy `nutritionData` for compatibility
   nutrition?: {
+    calories?: number;
+    protein_g?: number;
+    carbs_g?: number;
+    fat_g?: number;
+    fiber_g?: number;
+  };
+  nutritionData?: {
     calories?: number;
     protein_g?: number;
     carbs_g?: number;
@@ -54,7 +63,22 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   meal?: DrawerMealShape | null;
   enableSwap?: boolean;
-  onMealSwapped?: () => void;
+  // onMealSwapped receives the created recipe payload for optimistic UI updates
+  onMealSwapped?: (payload: {
+    recipe: {
+      id: string;
+      title: string;
+      description?: string;
+      ingredients: string[];
+      instructions: string[];
+      nutrition: NutritionData | undefined;
+      prepTimeMinutes?: number;
+      cookTimeMinutes?: number;
+      servings?: number;
+    };
+    dayOfWeek: number;
+    mealType: "breakfast" | "lunch" | "dinner";
+  }) => void;
 };
 
 export default function RecipeDrawer({
@@ -244,11 +268,17 @@ export default function RecipeDrawer({
             title: meal.title ?? "Recipe",
             type: meal.mealType ?? "meal",
             ingredients: meal.ingredients ?? [],
-            nutrition: { calories: meal.nutrition?.calories ?? 0 },
+            // Prefer normalized `nutrition`, fallback to legacy `nutritionData` when present
+            nutrition: {
+              calories:
+                meal.nutrition?.calories ?? meal.nutritionData?.calories ?? 0,
+            },
           }}
           mealPlanId={meal.mealPlanId ?? ""} // forwarded from dashboard
           dayOfWeek={meal.dayOfWeek ?? 1} // forwarded from dashboard
-          mealType={meal.mealType || "lunch"}
+          mealType={
+            (meal.mealType ?? "lunch") as "breakfast" | "lunch" | "dinner"
+          }
           userPreferences={{
             dietType: undefined, // Will be fetched from user profile in dashboard
             allergies: undefined,

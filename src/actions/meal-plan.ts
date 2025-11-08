@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
-import { PrismaClient } from "@/generated/prisma";
+import { PrismaClient, Prisma } from "@/generated/prisma";
 import { rateLimiter } from "@/lib/rate-limiter";
 import {
   MealGenerationRequest,
@@ -13,13 +13,12 @@ import {
   AIMealData,
   Meal,
 } from "@/types/meal-plan";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { callGeminiJSON } from "@/lib/ai";
+import { WeeklyPlanSchema, WeeklyPlan } from "@/types/schemas";
 import { headers } from "next/headers";
+import { normalizeRecipeDb } from "@/lib/normalize";
 
 const prisma = new PrismaClient();
-
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
 
 function normalizeWeekStart(date: Date): Date {
   const d = new Date(date);
@@ -126,9 +125,23 @@ export async function getMealPlan(
       return null;
     }
 
-    return MealPlanTransformer.dbToWeekMealPlan(
-      dbMealPlan as unknown as MealPlanWithRelations,
-    );
+    // Normalize recipe shape for backward compatibility (handles legacy string fields)
+    const normalizedMeals = dbMealPlan.meals.map((m) => {
+      const mealRecord = m as unknown as Record<string, unknown>;
+      return {
+        ...mealRecord,
+        recipe: mealRecord["recipe"]
+          ? normalizeRecipeDb(mealRecord["recipe"])
+          : undefined,
+      };
+    });
+
+    const normalizedDbMealPlan = {
+      ...dbMealPlan,
+      meals: normalizedMeals,
+    } as unknown as MealPlanWithRelations;
+
+    return MealPlanTransformer.dbToWeekMealPlan(normalizedDbMealPlan);
   } catch (error) {
     console.error("Error getting meal plan:", error);
     return null;
@@ -162,10 +175,27 @@ export async function getUserMealPlans(): Promise<WeekMealPlan[]> {
       orderBy: { weekStart: "desc" },
     });
 
-    return dbMealPlans.map((plan) =>
-      MealPlanTransformer.dbToWeekMealPlan(
-        plan as unknown as MealPlanWithRelations,
-      ),
+    // Normalize recipes on each meal to ensure UI receives consistent shapes
+    const normalizedPlans = dbMealPlans.map((plan) => {
+      const p = plan as unknown as { meals?: unknown[] } & Record<
+        string,
+        unknown
+      >;
+      const normalizedMeals = (p.meals || []).map((m) => {
+        const mi = m as unknown as Record<string, unknown>;
+        return {
+          ...mi,
+          recipe: mi["recipe"] ? normalizeRecipeDb(mi["recipe"]) : undefined,
+        };
+      });
+      return {
+        ...(p as object),
+        meals: normalizedMeals,
+      } as unknown as MealPlanWithRelations;
+    });
+
+    return normalizedPlans.map((plan) =>
+      MealPlanTransformer.dbToWeekMealPlan(plan),
     );
   } catch (error) {
     console.error("Error getting user meal plans:", error);
@@ -180,8 +210,6 @@ async function generateMealPlanWithAI(
   request: MealGenerationRequest,
 ): Promise<WeekMealPlan | null> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
     const weekDays = WeekUtils.getWeekDays(request.weekStart);
     const weekRange = WeekUtils.formatWeekRange(request.weekStart);
 
@@ -197,82 +225,102 @@ Requirements:
 2. Each day must have: breakfast, lunch, and dinner
 3. All meals should be realistic, healthy recipes
 4. Respect dietary restrictions and allergies
-5. Provide accurate nutrition information for each meal
+5. Provide accurate nutrition information for each meal (see format & example below)
 6. Include preparation time and serving size
 7. Meals should be varied and interesting
 
-Format your response as a JSON object with this exact structure:
+Nutrition requirements (important):
+- For each meal include a "nutrition" object with numeric values only (no units or text). Fields:
+  - calories: integer (per serving)
+  - protein_g: number (grams, optional)
+  - carbs_g: number (grams, optional)
+  - fat_g: number (grams, optional)
+  - fiber_g: number (grams, optional)
+- Example nutrition object:
+  "nutrition": { "calories": 420, "protein_g": 28, "carbs_g": 45, "fat_g": 12, "fiber_g": 6 }
+
+Return a JSON object matching this schema exactly (use numeric values for nutrition, do not include units or commentary inside JSON):
 {
   "meals": {
     "Monday": {
       "breakfast": {
-        "title": "Meal Title",
-        "description": "Brief description",
-        "ingredients": ["ingredient 1", "ingredient 2"],
-        "instructions": ["step 1", "step 2"],
-        "nutrition": {
-          "calories": 400,
-          "protein_g": 20,
-          "carbs_g": 45,
-          "fat_g": 15,
-          "fiber_g": 5
-        },
+        "title": "Overnight oats with berries",
+        "description": "Creamy oats soaked overnight with mixed berries",
+        "ingredients": ["rolled oats", "milk", "yogurt", "berries"],
+        "instructions": ["Mix oats and milk", "Refrigerate overnight", "Top with berries"],
+        "nutrition": { "calories": 350, "protein_g": 12, "carbs_g": 48, "fat_g": 8 },
         "prepTimeMinutes": 10,
         "servings": 1
       },
-      "lunch": {...},
-      "dinner": {...}
+      "lunch": {
+        "title": "Grilled chicken salad",
+        "description": "Light grilled chicken with mixed greens",
+        "ingredients": ["chicken breast", "lettuce", "tomatoes"],
+        "instructions": ["Grill chicken", "Assemble salad"],
+        "nutrition": { "calories": 450, "protein_g": 35 },
+        "prepTimeMinutes": 15,
+        "servings": 1
+      },
+      "dinner": {
+        "title": "Roasted salmon with quinoa",
+        "description": "Roasted salmon served with quinoa and steamed veggies",
+        "ingredients": ["salmon", "quinoa", "vegetables"],
+        "instructions": ["Roast salmon", "Cook quinoa"],
+        "nutrition": { "calories": 520, "protein_g": 34 },
+        "prepTimeMinutes": 20,
+        "servings": 1
+      }
     },
-    "Tuesday": {...},
     ...
   }
 }
 
-Ensure the JSON is valid and complete. Focus on nutritious, appealing meals that fit the user's preferences.`;
+Important:
+- Respond with raw JSON only. Do NOT include units, markdown, or explanatory text outside the JSON.
+- If a nutrition value is unknown, omit that key (do not insert strings like "unknown" or include units). Prefer numeric estimates where possible.
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+Respond with raw JSON only.`;
 
-    // Extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error("No JSON found in AI response");
-      return null;
-    }
-
-    const aiData = JSON.parse(jsonMatch[0]);
+    // Use helper which validates and retries if necessary
+    const aiData = await callGeminiJSON<WeeklyPlan>(
+      prompt,
+      WeeklyPlanSchema,
+      3,
+    );
 
     // Transform AI data to WeekMealPlan
     const weekMealPlan: WeekMealPlan = {
       weekStart: request.weekStart,
       weekEnd: WeekUtils.getWeekEnd(request.weekStart),
-      days: weekDays.map((day) => ({
-        ...day,
-        meals: {
-          breakfast: aiData.meals[day.day]?.breakfast
-            ? transformAIMealToMeal(
-                aiData.meals[day.day].breakfast,
-                day.dayOfWeek,
-                "breakfast",
-              )
-            : undefined,
-          lunch: aiData.meals[day.day]?.lunch
-            ? transformAIMealToMeal(
-                aiData.meals[day.day].lunch,
-                day.dayOfWeek,
-                "lunch",
-              )
-            : undefined,
-          dinner: aiData.meals[day.day]?.dinner
-            ? transformAIMealToMeal(
-                aiData.meals[day.day].dinner,
-                day.dayOfWeek,
-                "dinner",
-              )
-            : undefined,
-        },
-      })),
+      days: weekDays.map((day) => {
+        const dayAiMeals = aiData.meals[day.day];
+        return {
+          ...day,
+          meals: {
+            breakfast: dayAiMeals?.breakfast
+              ? transformAIMealToMeal(
+                  dayAiMeals.breakfast as AIMealData,
+                  day.dayOfWeek,
+                  "breakfast",
+                )
+              : undefined,
+            lunch: dayAiMeals?.lunch
+              ? transformAIMealToMeal(
+                  dayAiMeals.lunch as AIMealData,
+                  day.dayOfWeek,
+                  "lunch",
+                )
+              : undefined,
+            dinner: dayAiMeals?.dinner
+              ? transformAIMealToMeal(
+                  dayAiMeals.dinner as AIMealData,
+                  day.dayOfWeek,
+                  "dinner",
+                )
+              : undefined,
+          },
+        };
+      }),
     };
 
     return weekMealPlan;
@@ -330,9 +378,20 @@ async function saveMealPlanToDatabase(
           const recipe = await tx.recipe.create({
             data: {
               title: meal.recipe.title,
-              ingredients: JSON.stringify(meal.recipe.ingredients),
-              instructions: JSON.stringify(meal.recipe.instructions),
-              nutritionData: JSON.stringify(meal.recipe.nutritionData),
+              description: meal.recipe.description ?? undefined,
+              ingredients: meal.recipe.ingredients ?? [],
+              instructions: meal.recipe.instructions ?? [],
+              // Serialize and cast to Prisma InputJsonValue; use JsonNull when empty
+              nutritionData:
+                meal.recipe.nutritionData &&
+                Object.keys(meal.recipe.nutritionData).length > 0
+                  ? (JSON.parse(
+                      JSON.stringify(meal.recipe.nutritionData),
+                    ) as Prisma.InputJsonValue)
+                  : Prisma.JsonNull,
+              prepTimeMinutes: meal.recipe.prepTimeMinutes ?? undefined,
+              cookTimeMinutes: meal.recipe.cookTimeMinutes ?? undefined,
+              servings: meal.recipe.servings ?? undefined,
             },
           });
           recipeMap.set(`${day.dayOfWeek}-${meal.type}`, recipe.id);
